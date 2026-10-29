@@ -1,0 +1,199 @@
+{
+  "schema_version": "experiment-graph/1",
+  "mode": "inference",
+  "deployment": "../deployment.example.json",
+  "nodes": [
+    {
+      "id": "robot",
+      "kind": "driver",
+      "config": {
+        "binding": "deployment.arms"
+      }
+    },
+    {
+      "id": "cameras",
+      "kind": "cameras",
+      "config": {
+        "binding": "deployment.camera_config"
+      }
+    },
+    {
+      "id": "snapshot",
+      "kind": "snapshot",
+      "config": {
+        "clock": "host_received_monotonic",
+        "causal": true
+      }
+    },
+    {
+      "id": "scheduler",
+      "kind": "scheduler",
+      "config": {
+        "queue": "bounded_latest_chunk",
+        "late_policy": "reject_expired"
+      }
+    },
+    {
+      "id": "motion",
+      "kind": "motion_adapter",
+      "config": {
+        "action_encoding": "eef_initial_relative_xyzw",
+        "adapter": "pinocchio",
+        "frame_mapping": "recorded model base/tip; explicit calibration required",
+        "gripper_mapping": "physical width metres; model normalization must be explicit"
+      }
+    },
+    {
+      "id": "gateway",
+      "kind": "gateway",
+      "config": {
+        "implementation": "shared ownership and final guard; new runner binding required"
+      }
+    },
+    {
+      "id": "recorder",
+      "kind": "recorder",
+      "config": {
+        "storage": "deployment.recording"
+      }
+    },
+    {
+      "id": "operator",
+      "kind": "operator",
+      "config": {
+        "mode": "explicit local session lifecycle"
+      }
+    },
+    {
+      "id": "source",
+      "kind": "policy_client",
+      "config": {
+        "action_encoding": "eef_initial_relative_xyzw",
+        "adapter": "zero_wam_robotwin_bridge",
+        "endpoint": "ws://MODEL_SERVER:29056",
+        "protocol": "upstream msgpack-numpy",
+        "execution": "shadow_first"
+      }
+    },
+    {
+      "id": "context",
+      "kind": "task_context",
+      "config": {
+        "task": "REPLACE_TASK",
+        "human_video": "SERVER_SIDE_APPROVED_PATH_OR_LATENT",
+        "episode_reset": true
+      }
+    },
+    {
+      "id": "history",
+      "kind": "history",
+      "config": {
+        "actual_observations": true,
+        "execution_receipts": true,
+        "cache_policy": "reset_on_takeover_or_partial_execution"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "robot.observations",
+      "to": "snapshot.observations",
+      "delayed": true
+    },
+    {
+      "from": "cameras.observations",
+      "to": "snapshot.observations",
+      "delayed": false
+    },
+    {
+      "from": "snapshot.snapshot",
+      "to": "motion.snapshot",
+      "delayed": false
+    },
+    {
+      "from": "snapshot.snapshot",
+      "to": "gateway.snapshot",
+      "delayed": false
+    },
+    {
+      "from": "scheduler.action",
+      "to": "motion.action",
+      "delayed": false
+    },
+    {
+      "from": "motion.targets",
+      "to": "gateway.targets",
+      "delayed": false
+    },
+    {
+      "from": "gateway.commands",
+      "to": "robot.commands",
+      "delayed": false
+    },
+    {
+      "from": "gateway.events",
+      "to": "recorder.events",
+      "delayed": false
+    },
+    {
+      "from": "robot.observations",
+      "to": "recorder.observations",
+      "delayed": true
+    },
+    {
+      "from": "cameras.observations",
+      "to": "recorder.observations",
+      "delayed": false
+    },
+    {
+      "from": "scheduler.action",
+      "to": "recorder.actions",
+      "delayed": false
+    },
+    {
+      "from": "motion.targets",
+      "to": "recorder.targets",
+      "delayed": false
+    },
+    {
+      "from": "operator.operator",
+      "to": "gateway.operator",
+      "delayed": false
+    },
+    {
+      "from": "snapshot.snapshot",
+      "to": "source.snapshot",
+      "delayed": false
+    },
+    {
+      "from": "context.context",
+      "to": "source.context",
+      "delayed": false
+    },
+    {
+      "from": "history.history",
+      "to": "source.history",
+      "delayed": true
+    },
+    {
+      "from": "robot.observations",
+      "to": "history.observations",
+      "delayed": true
+    },
+    {
+      "from": "cameras.observations",
+      "to": "history.observations",
+      "delayed": false
+    },
+    {
+      "from": "gateway.events",
+      "to": "history.executed",
+      "delayed": false
+    },
+    {
+      "from": "source.action",
+      "to": "scheduler.action",
+      "delayed": false
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:robot-infra:graph:0.3.0-m1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "mode", "asset", "timing", "nodes", "edges"],
+  "properties": {
+    "schema_version": { "const": "0.3.0-m1" },
+    "mode": { "const": "fake" },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "joint_names",
+        "unit",
+        "frame_id",
+        "limits",
+        "initial_positions",
+        "calibration"
+      ],
+      "properties": {
+        "id": { "const": "fake-two-joint-v1" },
+        "joint_names": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "unit": { "const": "rad" },
+        "frame_id": { "const": "fake_base" },
+        "limits": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } }
+        },
+        "initial_positions": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "number" }
+        },
+        "calibration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "camera_role"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "kind": { "const": "synthetic" },
+            "camera_role": { "const": "front" }
+          }
+        }
+      }
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "clock_domain",
+        "period_ns",
+        "max_state_age_ns",
+        "max_action_age_ns",
+        "lease_ttl_ns"
+      ],
+      "properties": {
+        "clock_domain": { "const": "fake_monotonic" },
+        "period_ns": { "type": "integer", "minimum": 1 },
+        "max_state_age_ns": { "type": "integer", "minimum": 1 },
+        "max_action_age_ns": { "type": "integer", "minimum": 1 },
+        "lease_ttl_ns": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "ports"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "kind": {
+            "enum": [
+              "fake_teleop",
+              "stub_policy",
+              "identity_mapper",
+              "guard",
+              "fake_robot",
+              "fake_camera",
+              "recorder"
+            ]
+          },
+          "ports": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["direction", "type"],
+              "properties": {
+                "direction": { "enum": ["in", "out"] },
+                "type": { "enum": ["joint_position", "joint_state", "rgb8"] },
+                "unit": { "const": "rad" },
+                "frame_id": { "const": "fake_base" },
+                "clock_domain": { "const": "fake_monotonic" },
+                "joint_names": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": { "from": { "type": "string" }, "to": { "type": "string" } }
+      }
+    }
+  }
+}

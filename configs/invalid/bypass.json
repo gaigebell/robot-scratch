@@ -1,0 +1,191 @@
+{
+  "schema_version": "0.3.0-m1",
+  "mode": "fake",
+  "asset": {
+    "id": "fake-two-joint-v1",
+    "joint_names": ["joint_a", "joint_b"],
+    "unit": "rad",
+    "frame_id": "fake_base",
+    "limits": [
+      [-1.0, 1.0],
+      [-1.0, 1.0]
+    ],
+    "initial_positions": [0.0, 0.0],
+    "calibration": {
+      "id": "synthetic-front-v1",
+      "kind": "synthetic",
+      "camera_role": "front"
+    }
+  },
+  "timing": {
+    "clock_domain": "fake_monotonic",
+    "period_ns": 20000000,
+    "max_state_age_ns": 60000000,
+    "max_action_age_ns": 100000000,
+    "lease_ttl_ns": 5000000000
+  },
+  "nodes": [
+    {
+      "id": "fake_teleop",
+      "kind": "fake_teleop",
+      "ports": {
+        "intent": {
+          "direction": "out",
+          "type": "joint_position",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        }
+      }
+    },
+    {
+      "id": "stub_policy",
+      "kind": "stub_policy",
+      "ports": {
+        "intent": {
+          "direction": "out",
+          "type": "joint_position",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        }
+      }
+    },
+    {
+      "id": "identity_mapper",
+      "kind": "identity_mapper",
+      "ports": {
+        "intent": {
+          "direction": "in",
+          "type": "joint_position",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        },
+        "proposal": {
+          "direction": "out",
+          "type": "joint_position",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        }
+      }
+    },
+    {
+      "id": "guard",
+      "kind": "guard",
+      "ports": {
+        "proposal": {
+          "direction": "in",
+          "type": "joint_position",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        },
+        "command": {
+          "direction": "out",
+          "type": "joint_position",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        },
+        "state": {
+          "direction": "in",
+          "type": "joint_state",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        }
+      }
+    },
+    {
+      "id": "fake_robot",
+      "kind": "fake_robot",
+      "ports": {
+        "command": {
+          "direction": "in",
+          "type": "joint_position",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        },
+        "state": {
+          "direction": "out",
+          "type": "joint_state",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        }
+      }
+    },
+    {
+      "id": "fake_camera",
+      "kind": "fake_camera",
+      "ports": {
+        "rgb": {
+          "direction": "out",
+          "type": "rgb8",
+          "clock_domain": "fake_monotonic"
+        }
+      }
+    },
+    {
+      "id": "recorder",
+      "kind": "recorder",
+      "ports": {
+        "state": {
+          "direction": "in",
+          "type": "joint_state",
+          "clock_domain": "fake_monotonic",
+          "unit": "rad",
+          "frame_id": "fake_base",
+          "joint_names": ["joint_a", "joint_b"]
+        },
+        "rgb": {
+          "direction": "in",
+          "type": "rgb8",
+          "clock_domain": "fake_monotonic"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "fake_camera.rgb",
+      "to": "recorder.rgb"
+    },
+    {
+      "from": "fake_robot.state",
+      "to": "guard.state"
+    },
+    {
+      "from": "fake_robot.state",
+      "to": "recorder.state"
+    },
+    {
+      "from": "fake_teleop.intent",
+      "to": "identity_mapper.intent"
+    },
+    {
+      "from": "identity_mapper.proposal",
+      "to": "fake_robot.command"
+    },
+    {
+      "from": "identity_mapper.proposal",
+      "to": "guard.proposal"
+    },
+    {
+      "from": "stub_policy.intent",
+      "to": "identity_mapper.intent"
+    }
+  ]
+}

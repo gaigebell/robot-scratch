@@ -1,0 +1,34 @@
+include README.md AGENTS.md CONTRIBUTING.md CHANGELOG.md pyproject.toml uv.lock
+include publication.toml MANIFEST.in .editorconfig .gitattributes .gitignore
+include package.json package-lock.json .prettierrc.json .prettierignore
+include .github/workflows/checks.yml
+recursive-include src/robot_infra *.py *.json *.html *.js *.css *.txt
+# A renamed distribution must not carry stale metadata from an older build.
+prune src/robot_infra.egg-info
+recursive-include configs *.json
+recursive-include tests *.py *.mjs
+
+# Prune private trees even when an earlier egg-info cache listed their files.
+prune docs
+include docs/README.md docs/architecture.md docs/project-status.md
+include docs/agent-onboarding.md docs/development-guide.md docs/repository-layout.md
+include docs/configuration-guide.md docs/data-format.md docs/release-and-deployment.md
+prune plans
+include plans/README.md
+recursive-include plans/templates *.md
+prune tools
+include tools/README.md tools/check_project.py tools/check_publication.py tools/check_distribution.py
+include tools/collect_host_inventory.py tools/discover_devices.py
+include tools/audit_camera_delivery.py tools/profile_input_transport.py
+include tools/launch_live_stack.py tools/robot-infra-device.sh
+
+prune relevant-repo
+prune artifacts
+prune tmp
+prune output
+prune profiles
+prune dataset
+prune datasets
+prune runs
+prune node_modules
+global-exclude *.py[cod] *.mcap *.bag *.db3 *.pem *.key *.mp4 *.parquet

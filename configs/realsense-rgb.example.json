@@ -1,0 +1,29 @@
+{
+  "schema_version": "realsense-rgb-sample/1",
+  "cameras": [
+    {
+      "role": "left_wrist",
+      "serial_namespace": "realsense_sdk",
+      "serial": "REPLACE_WITH_SDK_SERIAL",
+      "width": 640,
+      "height": 480,
+      "fps": 15
+    },
+    {
+      "role": "right_wrist",
+      "serial_namespace": "realsense_sdk",
+      "serial": "REPLACE_WITH_SDK_SERIAL",
+      "width": 640,
+      "height": 480,
+      "fps": 15
+    },
+    {
+      "role": "scene_fixed",
+      "serial_namespace": "realsense_sdk",
+      "serial": "REPLACE_WITH_SDK_SERIAL",
+      "width": 640,
+      "height": 480,
+      "fps": 15
+    }
+  ]
+}

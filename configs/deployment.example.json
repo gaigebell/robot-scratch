@@ -1,0 +1,19 @@
+{
+  "schema_version": "robot-deployment/1",
+  "config": "profiles/robot.session.json",
+  "camera_config": "profiles/robot.cameras.json",
+  "camera_driver": "/opt/ros/REPLACE_DISTRO/lib/realsense2_camera/realsense2_camera_node",
+  "ros_domain_id": 64,
+  "host": "0.0.0.0",
+  "port": 8445,
+  "advertise_host": null,
+  "duration": 0,
+  "cert": "profiles/tls/cert.pem",
+  "key": "profiles/tls/key.pem",
+  "output_root": "runs",
+  "setup_scripts": [
+    "/opt/ros/REPLACE_DISTRO/setup.bash",
+    "/REPLACE_VENDOR_WORKSPACE/install/setup.bash"
+  ],
+  "python_paths": ["current/src", "python-deps"]
+}

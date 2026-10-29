@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>双臂遥操 Session</title>
+    <link rel="stylesheet" href="/assets/xr-session.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <small>ROBOT INFRA · TELEOP SESSION</small>
+          <h1>双臂自由遥操 <span id="build">transport-021-r3</span></h1>
+        </div>
+        <div id="state">设备自检中</div>
+      </header>
+      <div class="views">
+        <figure>
+          <img id="left_wrist" alt="左腕实时画面" />
+          <figcaption>左腕 <span id="left_wrist_fps"></span></figcaption>
+        </figure>
+        <figure class="primary">
+          <img id="scene_fixed" alt="固定主相机实时画面" />
+          <figcaption>固定主视角 <span id="scene_fixed_fps"></span></figcaption>
+        </figure>
+        <figure>
+          <img id="right_wrist" alt="右腕实时画面" />
+          <figcaption>右腕 <span id="right_wrist_fps"></span></figcaption>
+        </figure>
+      </div>
+      <section>
+        <p id="instruction">等待设备与求解器就绪。</p>
+        <div class="actions">
+          <button id="start" disabled>进入 VR</button
+          ><button id="pause" class="secondary">暂停</button
+          ><button id="end" class="secondary">退出 VR</button>
+        </div>
+        <p>
+          <label
+            ><input
+              id="preview"
+              type="checkbox"
+              checked
+            />显示相机预览（可关闭以检查控制链路，原始采集不受影响）</label
+          >
+        </p>
+        <p id="control-check" hidden>
+          若提示控制连接未就绪，请先<a id="control-link" target="_blank" rel="noopener"
+            >检查控制连接并处理证书提示</a
+          >，再刷新本页。
+        </p>
+        <p class="note">
+          A：回位 / 开始 / 结束。侧握键：同侧机械臂跟随，松开保持。<span id="trigger-help"
+            >扳机方向读取配置中。</span
+          >退出 VR 自动暂停，重新进入后按 A 执行 HUD 提示。
+        </p>
+        <p class="note">
+          主屏固定在进入 VR 时的空间位置；转头看两侧腕屏，抬头看状态，低头看相机与操作
+          HUD。采集模式结束后：A 保存 / X 丢弃。下方状态显示任务、episode、写盘与 QC
+          结果；自由遥操模式不录制 episode。
+        </p>
+      </section>
+      <details>
+        <summary>诊断信息</summary>
+        <pre id="status">连接中…</pre>
+        <pre id="input">等待手柄</pre>
+      </details>
+      <div id="error" role="status"></div>
+      <canvas id="xr"></canvas>
+    </main>
+    <script type="module" src="/assets/xr-session.js"></script>
+  </body>
+</html>

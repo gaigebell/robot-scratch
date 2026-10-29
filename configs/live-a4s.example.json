@@ -1,0 +1,50 @@
+{
+  "schema_version": "live-teleop/1",
+  "gripper_control": false,
+  "model": {
+    "path": "/absolute/path/to/audited-model.urdf",
+    "base": "base_link",
+    "tip": "gripper_base",
+    "joint_names": ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"],
+    "sha256": "REPLACE_WITH_AUDITED_MODEL_SHA256"
+  },
+  "arms": {
+    "left": {
+      "command_topic": "/robot_infra/left/driver_command",
+      "enable_topic": "/robot_infra/left/driver_enable",
+      "feedback_topic": "/left_arm/joint_states_feedback",
+      "status_topic": "/left_arm/arm_status",
+      "can_interface": "can_left"
+    },
+    "right": {
+      "command_topic": "/robot_infra/right/driver_command",
+      "enable_topic": "/robot_infra/right/driver_enable",
+      "feedback_topic": "/right_arm/joint_states_feedback",
+      "status_topic": "/right_arm/arm_status",
+      "can_interface": "can_right"
+    }
+  },
+  "camera_topics": {
+    "left_wrist": "/left_wrist/color/image_raw",
+    "right_wrist": "/right_wrist/color/image_raw",
+    "scene_fixed": "/scene_fixed/color/image_raw"
+  },
+  "feedback_timeout_s": 0.25,
+  "input_timeout_s": 0.6,
+  "max_joint_excursion_rad": 0.6,
+  "max_tracking_error_rad": 0.08,
+  "max_joint_speed_rad_s": 0.4,
+  "max_cartesian_delta_m": 0.1,
+  "scale": 1.0,
+  "clutch_button": 1,
+  "driver_speed_percent": 20,
+  "alignment": [
+    [0, 0, -1],
+    [-1, 0, 0],
+    [0, 1, 0]
+  ],
+  "ik_deadline_ms": 35,
+  "mapping_status": "candidate: verify operator/base alignment on each new installation",
+  "measurement_tolerance_rad": 0.005,
+  "motion_scope": "bounded commissioning template; requires operator-approved model, identity and limits"
+}

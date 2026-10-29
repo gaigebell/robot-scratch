@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>A4-S 双臂遥操</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0a1522;
+      color: #e6f0f5;
+      font: 17px system-ui;
+    }
+    main {
+      padding: 24px;
+      max-width: 1500px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 26px;
+    }
+    button {
+      font: inherit;
+      padding: 14px 24px;
+      border: 0;
+      border-radius: 9px;
+      margin: 8px;
+      background: #87dfc6;
+      color: #092f28;
+    }
+    button.stop {
+      background: #fcb7a4;
+    }
+    button:disabled {
+      opacity: 0.4;
+    }
+    .views {
+      display: grid;
+      grid-template-columns: 1fr 2.4fr 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+    figure {
+      margin: 0;
+      background: #172a3d;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    img {
+      width: 100%;
+      display: block;
+      aspect-ratio: 4/3;
+      object-fit: contain;
+    }
+    figcaption {
+      padding: 10px;
+      color: #afcedd;
+    }
+    pre {
+      white-space: pre-wrap;
+      background: #132538;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    canvas {
+      display: none;
+    }
+    .note {
+      color: #b3c9d6;
+      line-height: 1.7;
+    }
+    .red {
+      color: #ffb49c;
+    }
+  </style>
+  <main>
+    <h1>A4-S · 双臂 VR 遥操 <small>r5</small></h1>
+    <p class="note">
+      侧握键：按住控制同侧手臂，松开保持。位置
+      1:1，朝向和夹爪保持。本轮每次接合目标范围10厘米，关节偏移范围0.6rad；松键并重新握键可重建手柄参考位置。固定
+      D455 为主视角。
+    </p>
+    <div class="views">
+      <figure>
+        <img id="left_wrist" />
+        <figcaption>左腕 D435</figcaption>
+      </figure>
+      <figure>
+        <img id="scene_fixed" />
+        <figcaption>主视角 · 固定 D455</figcaption>
+      </figure>
+      <figure>
+        <img id="right_wrist" />
+        <figcaption>右腕 D435</figcaption>
+      </figure>
+    </div>
+    <p>
+      <label
+        ><input id="motion" type="checkbox" />本次进入 VR
+        后允许侧握键控制手臂（未勾选只看画面）</label
+      >
+    </p>
+    <button id="start" disabled>进入 VR</button><button id="stop" class="stop">停止遥操</button
+    ><button id="end">退出 VR</button>
+    <p class="note">
+      方向候选：手柄前 → 基座 +X，左 → +Y，上 →
+      +Z。此映射尚待现场确认。网页停止会撤销控制权并尝试保持当前位置；实体急停仍由现场操作者掌握。
+    </p>
+    <pre id="status">连接中…</pre>
+    <canvas id="xr"></canvas>
+  </main>
+  <script>
+    "use strict";
+    const $ = (id) => document.getElementById(id),
+      sid = crypto.randomUUID(),
+      roles = ["left_wrist", "scene_fixed", "right_wrist"];
+    let session = null,
+      ref = null,
+      gl = null,
+      program = null,
+      buffer = null,
+      seq = 0,
+      epoch = 0,
+      serverTime = 0,
+      active = false,
+      allowMotion = false;
+    let wantControl = false,
+      arming = false,
+      visibleSince = null,
+      clientError = null;
+    let sending = false,
+      latest = null,
+      lastInput = -1e9,
+      skipped = 0,
+      errors = 0,
+      viewerSpace = null,
+      videoStopped = false;
+    const images = {},
+      textures = {},
+      ids = new WeakMap();
+    let nextId = 0;
+    async function post(path, body) {
+      const r = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(900),
+      });
+      const v = await r.json();
+      if (v.server_s) serverTime = v.server_s;
+      if (!r.ok) throw Error(v.error || r.status);
+      return v;
+    }
+    function pose(p) {
+      if (!p) return null;
+      const t = p.transform;
+      return {
+        position_m: [t.position.x, t.position.y, t.position.z],
+        orientation_xyzw: [t.orientation.x, t.orientation.y, t.orientation.z, t.orientation.w],
+        emulated_position: !!p.emulatedPosition,
+      };
+    }
+    function packet(f, t) {
+      const viewer = f.getViewerPose(ref);
+      return {
+        schema_version: "webxr-input/1",
+        session_id: sid,
+        seq: seq++,
+        epoch,
+        event: "frame",
+        reference_space: "local-floor",
+        client_time_ms: performance.now(),
+        client_unix_ms: Date.now(),
+        xr_frame_time_ms: t,
+        visibility: session.visibilityState,
+        head: pose(viewer),
+        last_server_s: serverTime,
+        inputs: Array.from(session.inputSources, (s) => {
+          if (!ids.has(s)) ids.set(s, ++nextId);
+          return {
+            source_id: ids.get(s),
+            handedness: s.handedness,
+            profiles: Array.from(s.profiles),
+            grip: s.gripSpace ? pose(f.getPose(s.gripSpace, ref)) : null,
+            target_ray: pose(f.getPose(s.targetRaySpace, ref)),
+            gamepad: s.gamepad
+              ? {
+                  buttons: Array.from(s.gamepad.buttons, (b) => ({
+                    value: b.value,
+                    pressed: b.pressed,
+                    touched: b.touched,
+                  })),
+                  axes: Array.from(s.gamepad.axes),
+                }
+              : null,
+          };
+        }),
+        transport: { skipped, errors },
+      };
+    }
+    async function send(p) {
+      if (latest) skipped++;
+      latest = p;
+      if (sending) return;
+      sending = true;
+      try {
+        while (latest && active) {
+          const item = latest;
+          latest = null;
+          item.last_server_s = serverTime;
+          const r = await post("/api/input", item);
+          if (!r.enabled) {
+            active = false;
+            latest = null;
+          }
+        }
+      } catch (e) {
+        errors++;
+        active = false;
+        wantControl = false;
+        latest = null;
+        clientEvent("input_transport", e);
+        $("status").textContent = String(e);
+        try {
+          await post("/api/stop", {});
+        } catch (_) {}
+      } finally {
+        sending = false;
+      }
+    }
+    async function clientEvent(stage, error) {
+      const event = { stage, value: String(error), visibility: session?.visibilityState };
+      if (stage !== "visibility") {
+        event.error = String(error);
+        event.stack = error?.stack;
+        clientError = event;
+      }
+      try {
+        await post("/api/client-event", event);
+      } catch (_) {}
+    }
+    async function stop() {
+      wantControl = false;
+      active = false;
+      latest = null;
+      try {
+        await post("/api/stop", {});
+      } catch (e) {
+        $("status").textContent = String(e);
+      }
+    }
+    $("stop").onclick = stop;
+    $("end").onclick = async () => {
+      await stop();
+      if (session) await session.end();
+    };
+    // Three independent latest-image loops: video cannot queue input requests.
+    for (const role of roles) {
+      images[role] = { image: null, updated: 0 };
+      (async () => {
+        while (!videoStopped) {
+          try {
+            const r = await fetch("/camera/" + role + ".jpg?t=" + Date.now(), {
+              signal: AbortSignal.timeout(1000),
+            });
+            if (!r.ok) throw Error("stale");
+            const blob = await r.blob(),
+              bitmap = await createImageBitmap(blob, { imageOrientation: "flipY" });
+            if (images[role].image) images[role].image.close();
+            images[role] = { image: bitmap, updated: performance.now() };
+            const url = URL.createObjectURL(blob),
+              old = $(role).dataset.url;
+            $(role).src = url;
+            $(role).dataset.url = url;
+            if (old) URL.revokeObjectURL(old);
+          } catch (_) {
+            images[role].updated = 0;
+          }
+          await new Promise((r) => setTimeout(r, 110));
+        }
+      })();
+    }
+    function shader(type, source) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, source);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(s));
+      return s;
+    }
+    function initGL() {
+      program = gl.createProgram();
+      gl.attachShader(
+        program,
+        shader(
+          gl.VERTEX_SHADER,
+          "attribute vec3 p;attribute vec2 uv;uniform mat4 projection;uniform mat4 view;varying vec2 v;void main(){v=uv;gl_Position=projection*view*vec4(p,1.0);}",
+        ),
+      );
+      gl.attachShader(
+        program,
+        shader(
+          gl.FRAGMENT_SHADER,
+          "precision mediump float;varying vec2 v;uniform sampler2D tex;uniform float fresh;void main(){vec3 c=texture2D(tex,v).rgb;gl_FragColor=vec4(mix(vec3(.15,.03,.02),c,fresh),1.);}",
+        ),
+      );
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+        throw Error(gl.getProgramInfoLog(program));
+      buffer = gl.createBuffer();
+      for (const role of [...roles, "hud"]) {
+        textures[role] = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, textures[role]);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.RGBA,
+          1,
+          1,
+          0,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          new Uint8Array([15, 30, 44, 255]),
+        );
+      }
+    }
+    const hud = document.createElement("canvas");
+    hud.width = 1024;
+    hud.height = 128;
+    let lastHud = 0,
+      remote = {};
+    function quad(role, x, y, width, height, view, projection, fresh = 1) {
+      const z = -2,
+        vertices = [
+          x - width / 2,
+          y - height / 2,
+          z,
+          0,
+          0,
+          x + width / 2,
+          y - height / 2,
+          z,
+          1,
+          0,
+          x - width / 2,
+          y + height / 2,
+          z,
+          0,
+          1,
+          x + width / 2,
+          y + height / 2,
+          z,
+          1,
+          1,
+        ];
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+      const p = gl.getAttribLocation(program, "p"),
+        uv = gl.getAttribLocation(program, "uv");
+      gl.enableVertexAttribArray(p);
+      gl.vertexAttribPointer(p, 3, gl.FLOAT, false, 20, 0);
+      gl.enableVertexAttribArray(uv);
+      gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 20, 12);
+      gl.uniformMatrix4fv(gl.getUniformLocation(program, "projection"), false, projection);
+      gl.uniformMatrix4fv(gl.getUniformLocation(program, "view"), false, view);
+      gl.uniform1f(gl.getUniformLocation(program, "fresh"), fresh);
+      gl.bindTexture(gl.TEXTURE_2D, textures[role]);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    function frame(t, f) {
+      if (!session) return;
+      session.requestAnimationFrame(frame);
+      try {
+        const viewer = f.getViewerPose(viewerSpace),
+          layer = session.renderState.baseLayer;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+        gl.clearColor(0.025, 0.045, 0.075, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.useProgram(program);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        for (const role of roles) {
+          const v = images[role];
+          if (v.image) {
+            gl.bindTexture(gl.TEXTURE_2D, textures[role]);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v.image);
+          }
+        }
+        if (t - lastHud > 250) {
+          lastHud = t;
+          const c = hud.getContext("2d");
+          c.fillStyle = "#102337";
+          c.fillRect(0, 0, 1024, 128);
+          c.fillStyle = active ? "#85e3c7" : "#ffc5ae";
+          c.font = "32px sans-serif";
+          c.fillText(
+            active ? "VR CONTROL: SQUEEZE TO MOVE" : "VIEW ONLY / CONTROL STOPPED",
+            24,
+            46,
+          );
+          c.fillStyle = "#dce9ed";
+          c.font = "24px sans-serif";
+          c.fillText("LEFT WRIST            FIXED / HEAD CAMERA            RIGHT WRIST", 24, 88);
+          c.fillText(
+            "1:1  |  " + (remote.reason || "READY") + "  |  RELEASE SQUEEZE TO HOLD",
+            24,
+            118,
+          );
+          gl.bindTexture(gl.TEXTURE_2D, textures.hud);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, hud);
+        }
+        if (viewer)
+          for (const v of viewer.views) {
+            const viewport = layer.getViewport(v);
+            gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+            const matrix = v.transform.inverse.matrix;
+            quad(
+              "scene_fixed",
+              0,
+              0,
+              1.65,
+              1.2375,
+              matrix,
+              v.projectionMatrix,
+              performance.now() - images.scene_fixed.updated < 1500 ? 1 : 0,
+            );
+            quad(
+              "left_wrist",
+              -1.2,
+              0,
+              0.65,
+              0.4875,
+              matrix,
+              v.projectionMatrix,
+              performance.now() - images.left_wrist.updated < 1500 ? 1 : 0,
+            );
+            quad(
+              "right_wrist",
+              1.2,
+              0,
+              0.65,
+              0.4875,
+              matrix,
+              v.projectionMatrix,
+              performance.now() - images.right_wrist.updated < 1500 ? 1 : 0,
+            );
+            quad("hud", 0, 0.8, 2, 0.25, matrix, v.projectionMatrix);
+          }
+        if (
+          wantControl &&
+          !active &&
+          !arming &&
+          session.visibilityState === "visible" &&
+          f.getViewerPose(ref)
+        ) {
+          if (visibleSince === null) visibleSince = t;
+          if (t - visibleSince > 250) {
+            arming = true;
+            post("/api/arm", { session_id: sid, user_agent: navigator.userAgent })
+              .then(() => {
+                active = true;
+                wantControl = false;
+              })
+              .catch((e) => clientEvent("arm", e))
+              .finally(() => {
+                arming = false;
+              });
+          }
+        }
+        if (active && t - lastInput >= 40) {
+          lastInput = t;
+          send(packet(f, t));
+        }
+      } catch (e) {
+        clientEvent("xr_frame", e);
+        $("status").textContent = String(e);
+        stop();
+      }
+    }
+    $("start").onclick = async () => {
+      $("start").disabled = true;
+      try {
+        allowMotion = $("motion").checked;
+        gl = $("xr").getContext("webgl", { xrCompatible: true });
+        await gl.makeXRCompatible();
+        initGL();
+        session = await navigator.xr.requestSession("immersive-vr", {
+          requiredFeatures: ["local-floor"],
+        });
+        session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
+        ref = await session.requestReferenceSpace("local-floor");
+        viewerSpace = await session.requestReferenceSpace("viewer");
+        ref.addEventListener("reset", () => {
+          epoch++;
+          stop();
+        });
+        session.addEventListener("visibilitychange", () => {
+          clientEvent("visibility", session.visibilityState);
+          if (active && session.visibilityState !== "visible") stop();
+          if (session.visibilityState !== "visible") visibleSince = null;
+        });
+        session.addEventListener("end", () => {
+          stop();
+          session = null;
+          $("start").disabled = false;
+        });
+        wantControl = allowMotion;
+        visibleSince = null;
+        session.requestAnimationFrame(frame);
+      } catch (e) {
+        clientEvent("session_start", e);
+        $("status").textContent = String(e);
+        await stop();
+        if (session) await session.end();
+        session = null;
+        $("start").disabled = false;
+      }
+    };
+    async function status() {
+      try {
+        const r = await fetch("/api/status", { signal: AbortSignal.timeout(1000) });
+        remote = await r.json();
+        if (!active) serverTime = remote.server_s;
+        $("status").textContent = JSON.stringify(
+          {
+            enabled: remote.enabled,
+            reason: remote.reason,
+            active: remote.active,
+            input_age_ms: remote.input_age_ms,
+            cameras: remote.cameras,
+            arms: remote.arms,
+            errors: remote.errors,
+            skipped,
+            send_errors: errors,
+            clientError,
+          },
+          null,
+          2,
+        );
+      } catch (e) {
+        $("status").textContent = String(e);
+      }
+      setTimeout(status, 700);
+    }
+    window.addEventListener("pagehide", () => {
+      videoStopped = true;
+      navigator.sendBeacon("/api/stop", new Blob(["{}"], { type: "application/json" }));
+    });
+    (async () => {
+      const supported =
+        isSecureContext && navigator.xr && (await navigator.xr.isSessionSupported("immersive-vr"));
+      $("start").disabled = !supported;
+      if (!supported) $("status").textContent = "需要支持 WebXR 的 HTTPS 头显浏览器";
+      status();
+    })();
+  </script>
+</html>

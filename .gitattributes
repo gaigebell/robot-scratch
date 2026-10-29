@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.whl binary
+*.gz binary
+
+# Preserve upstream vendored bytes, including their original indentation.
+src/robot_infra/web/vendor/* -whitespace

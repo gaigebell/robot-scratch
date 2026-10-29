@@ -1,0 +1,35 @@
+{
+  "schema_version": "device-bindings/1",
+  "roles": [
+    {
+      "role": "left.arm.transport",
+      "kind": "can_interface",
+      "match": { "serial": "REPLACE_WITH_LEFT_CAN_ADAPTER_SERIAL" },
+      "confirmation": "unconfirmed"
+    },
+    {
+      "role": "right.arm.transport",
+      "kind": "can_interface",
+      "match": { "serial": "REPLACE_WITH_RIGHT_CAN_ADAPTER_SERIAL" },
+      "confirmation": "unconfirmed"
+    },
+    {
+      "role": "left_wrist",
+      "kind": "usb_device",
+      "match": { "serial": "REPLACE_WITH_LEFT_CAMERA_SERIAL" },
+      "confirmation": "unconfirmed"
+    },
+    {
+      "role": "right_wrist",
+      "kind": "usb_device",
+      "match": { "serial": "REPLACE_WITH_RIGHT_CAMERA_SERIAL" },
+      "confirmation": "unconfirmed"
+    },
+    {
+      "role": "scene_fixed",
+      "kind": "usb_device",
+      "match": { "serial": "REPLACE_WITH_SCENE_CAMERA_SERIAL" },
+      "confirmation": "unconfirmed"
+    }
+  ]
+}

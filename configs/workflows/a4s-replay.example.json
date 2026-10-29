@@ -1,0 +1,26 @@
+{
+  "schema_version": "workflow-session/1",
+  "graph": "../graphs/a4s-replay.json",
+  "backend": "piper_ros",
+  "profile": null,
+  "source": {
+    "kind": "episode",
+    "episode": "/absolute/path/to/saved/episode",
+    "training_config": "../training-a4s-rgb.example.json",
+    "journals": [],
+    "start_s": 0.0,
+    "duration_s": 5.0,
+    "speed": 1.0,
+    "max_lag_s": 0.15
+  },
+  "execution": {
+    "control_hz": 60,
+    "alignment_duration_s": 4.0,
+    "alignment_timeout_s": 20.0,
+    "alignment_settle_s": 0.5,
+    "alignment_tolerance_rad": 0.02,
+    "max_tick_gap_s": 0.2,
+    "readiness_timeout_s": 30.0
+  },
+  "fake_device": null
+}

@@ -1,0 +1,88 @@
+{
+  "schema_version": "collection-plan/1",
+  "mode": "fake",
+  "asset_id": "synthetic-dual-six-joint-with-grippers-v1",
+  "clock_domain": "fake_monotonic",
+  "endpoints": [
+    {
+      "id": "left.arm",
+      "backend": "left.piper",
+      "kind": "joint_position",
+      "names": ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"],
+      "unit": "rad",
+      "frame_id": "left_synthetic_base",
+      "limits": [
+        [-1, 1],
+        [-1, 1],
+        [-1, 1],
+        [-1, 1],
+        [-1, 1],
+        [-1, 1]
+      ],
+      "initial": [0, 0, 0, 0, 0, 0],
+      "max_step": 0.1
+    },
+    {
+      "id": "left.gripper",
+      "backend": "left.piper",
+      "kind": "gripper_position",
+      "names": ["opening"],
+      "unit": "m",
+      "frame_id": "left_synthetic_tool",
+      "limits": [[0, 0.08]],
+      "initial": [0.04],
+      "max_step": 0.005
+    },
+    {
+      "id": "right.arm",
+      "backend": "right.piper",
+      "kind": "joint_position",
+      "names": ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"],
+      "unit": "rad",
+      "frame_id": "right_synthetic_base",
+      "limits": [
+        [-1, 1],
+        [-1, 1],
+        [-1, 1],
+        [-1, 1],
+        [-1, 1],
+        [-1, 1]
+      ],
+      "initial": [0, 0, 0, 0, 0, 0],
+      "max_step": 0.1
+    },
+    {
+      "id": "right.gripper",
+      "backend": "right.piper",
+      "kind": "gripper_position",
+      "names": ["opening"],
+      "unit": "m",
+      "frame_id": "right_synthetic_tool",
+      "limits": [[0, 0.08]],
+      "initial": [0.04],
+      "max_step": 0.005
+    }
+  ],
+  "backends": ["left.piper", "right.piper"],
+  "group": {
+    "id": "bimanual",
+    "members": ["left.arm", "left.gripper", "right.arm", "right.gripper"]
+  },
+  "sources": [
+    {
+      "id": "teleop",
+      "priority": 100
+    },
+    {
+      "id": "stub_policy",
+      "priority": 10
+    }
+  ],
+  "cameras": ["left_wrist", "right_wrist", "scene_fixed"],
+  "timing": {
+    "period_ns": 20000000,
+    "max_state_age_ns": 60000000,
+    "max_action_age_ns": 100000000,
+    "lease_ttl_ns": 1000000000
+  }
+}

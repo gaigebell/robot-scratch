@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=75,<83"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robot-scratch"
+version = "0.3.0"
+description = "Modular robot experimentation: teleoperation, recording, replay and policy integration"
+requires-python = ">=3.11"
+dependencies = ["mcap>=1.3,<2", "jsonschema>=4.10.3,<5"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "ruff==0.11.13", "build>=1.2,<2", "setuptools>=75,<83", "wheel>=0.45,<1"]
+video = ["Pillow>=10,<13"]
+mp4 = ["av>=16.1,<17"]
+motion = ["pin>=3,<5", "scipy>=1.16,<2"]
+teleop = ["websockets>=16,<17"]
+webrtc = ["aiortc>=1.14,<2", "av>=16.1,<17"]
+
+[project.scripts]
+robot-scratch = "robot_infra.cli:main"
+# Preserve existing robot-host launch scripts while the public project is renamed.
+robot-infra = "robot_infra.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+robot_infra = ["schemas/*.json", "web/*.html", "web/*.js", "web/*.css", "web/vendor/*.js", "web/vendor/*.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --basetemp=artifacts/pytest"
+
+[tool.ruff]
+required-version = "==0.11.13"
+target-version = "py311"
+line-length = 100
+src = ["src"]
+include = ["src/**/*.py", "tests/**/*.py", "tools/**/*.py", "pyproject.toml"]
+extend-exclude = ["artifacts", "relevant-repo", "tmp", "output", "build", "dist", ".venv*"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+# Optional driver imports stay inside adapters/functions: importing the core must
+# remain usable on development hosts without ROS, SDKs or motion dependencies.
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.ruff.lint.per-file-ignores]
+# Optional dependency skips must execute before these modules import the adapter.
+"tests/test_mp4_storage.py" = ["E402"]
+"tests/test_pinocchio_model.py" = ["E402"]

@@ -1,0 +1,21 @@
+[publication]
+# Only these files may enter the public branch or source distribution.
+include = [
+  ".editorconfig", ".gitattributes", ".gitignore", ".prettierignore", ".prettierrc.json",
+  ".github/workflows/checks.yml",
+  "AGENTS.md", "README.md", "CONTRIBUTING.md", "CHANGELOG.md", "MANIFEST.in",
+  "publication.toml", "pyproject.toml", "uv.lock", "package.json", "package-lock.json",
+  "src/robot_infra/*.py", "src/robot_infra/adapters/*.py",
+  "src/robot_infra/schemas/*.json", "src/robot_infra/web/*.html",
+  "src/robot_infra/web/*.js", "src/robot_infra/web/*.css", "src/robot_infra/web/vendor/*.js",
+  "src/robot_infra/web/vendor/*.txt", "tests/*.py", "tests/*.mjs",
+  "configs/*.json", "configs/graphs/*.json", "configs/workflows/*.json", "configs/invalid/*.json",
+  "docs/README.md", "docs/architecture.md", "docs/project-status.md",
+  "docs/agent-onboarding.md", "docs/development-guide.md", "docs/repository-layout.md",
+  "docs/configuration-guide.md", "docs/data-format.md", "docs/release-and-deployment.md",
+  "plans/README.md", "plans/templates/*.md", "tools/README.md",
+  "tools/check_project.py", "tools/check_publication.py", "tools/check_distribution.py", "tools/collect_host_inventory.py",
+  "tools/discover_devices.py", "tools/audit_camera_delivery.py", "tools/profile_input_transport.py",
+  "tools/launch_live_stack.py", "tools/robot-infra-device.sh",
+]
+max_file_bytes = 2000000

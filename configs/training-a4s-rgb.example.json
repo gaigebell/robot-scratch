@@ -1,0 +1,67 @@
+{
+  "schema_version": "training-view/1",
+  "fps": 30,
+  "endpoints": [
+    {
+      "id": "left.arm",
+      "side": "left",
+      "names": ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"],
+      "feedback_field": "q",
+      "command_field": "q",
+      "unit": "rad"
+    },
+    {
+      "id": "left.gripper",
+      "side": "left",
+      "names": ["width"],
+      "feedback_field": "gripper",
+      "command_field": "gripper_m",
+      "unit": "m"
+    },
+    {
+      "id": "right.arm",
+      "side": "right",
+      "names": ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"],
+      "feedback_field": "q",
+      "command_field": "q",
+      "unit": "rad"
+    },
+    {
+      "id": "right.gripper",
+      "side": "right",
+      "names": ["width"],
+      "feedback_field": "gripper",
+      "command_field": "gripper_m",
+      "unit": "m"
+    }
+  ],
+  "visuals": [
+    {
+      "feature": "observation.images.scene_fixed",
+      "stream": "camera/scene_fixed/rgb",
+      "required": true,
+      "depth_m_per_unit": null
+    },
+    {
+      "feature": "observation.images.left_wrist",
+      "stream": "camera/left_wrist/rgb",
+      "required": true,
+      "depth_m_per_unit": null
+    },
+    {
+      "feature": "observation.images.right_wrist",
+      "stream": "camera/right_wrist/rgb",
+      "required": true,
+      "depth_m_per_unit": null
+    }
+  ],
+  "sampling": {
+    "max_state_age_s": 0.1,
+    "max_image_age_s": 0.1,
+    "action_offset_steps": 1
+  },
+  "quality": {
+    "require_saved": true,
+    "require_qc_pass": true
+  }
+}

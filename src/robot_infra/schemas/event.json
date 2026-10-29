@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:robot-infra:event:0.3.0-m1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "session_id",
+    "event_id",
+    "epoch",
+    "kind",
+    "time_ns",
+    "clock_domain",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.3.0-m1" },
+    "session_id": { "type": "string", "minLength": 1 },
+    "event_id": { "type": "integer", "minimum": 0 },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "kind": {
+      "enum": [
+        "manifest",
+        "lifecycle",
+        "ownership",
+        "state",
+        "camera",
+        "snapshot",
+        "intent",
+        "mapped",
+        "guard",
+        "command",
+        "receipt",
+        "feedback",
+        "policy_request",
+        "policy_output",
+        "chunk",
+        "scheduled",
+        "finalize"
+      ]
+    },
+    "time_ns": { "type": "integer", "minimum": 0 },
+    "clock_domain": { "const": "fake_monotonic" },
+    "payload": { "type": "object" }
+  }
+}

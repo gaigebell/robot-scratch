@@ -1,0 +1,158 @@
+{
+  "schema_version": "experiment-graph/1",
+  "mode": "collection",
+  "deployment": "../deployment.example.json",
+  "nodes": [
+    {
+      "id": "robot",
+      "kind": "driver",
+      "config": {
+        "binding": "deployment.arms"
+      }
+    },
+    {
+      "id": "cameras",
+      "kind": "cameras",
+      "config": {
+        "binding": "deployment.camera_config"
+      }
+    },
+    {
+      "id": "snapshot",
+      "kind": "snapshot",
+      "config": {
+        "clock": "host_received_monotonic",
+        "causal": true
+      }
+    },
+    {
+      "id": "scheduler",
+      "kind": "scheduler",
+      "config": {
+        "queue": "bounded_latest_chunk",
+        "late_policy": "reject_expired"
+      }
+    },
+    {
+      "id": "motion",
+      "kind": "motion_adapter",
+      "config": {
+        "action_encoding": "eef_absolute_matrix",
+        "adapter": "pinocchio",
+        "frame_mapping": "recorded model base/tip; explicit calibration required",
+        "gripper_mapping": "physical width metres; model normalization must be explicit"
+      }
+    },
+    {
+      "id": "gateway",
+      "kind": "gateway",
+      "config": {
+        "implementation": "shared ownership and final guard; new runner binding required"
+      }
+    },
+    {
+      "id": "recorder",
+      "kind": "recorder",
+      "config": {
+        "storage": "deployment.recording"
+      }
+    },
+    {
+      "id": "vr",
+      "kind": "webxr",
+      "config": {
+        "binding": "deployment.buttons"
+      }
+    },
+    {
+      "id": "source",
+      "kind": "teleop_mapping",
+      "config": {
+        "action_encoding": "eef_absolute_matrix",
+        "adapter": "relative WebXR mapping"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "robot.observations",
+      "to": "snapshot.observations",
+      "delayed": true
+    },
+    {
+      "from": "cameras.observations",
+      "to": "snapshot.observations",
+      "delayed": false
+    },
+    {
+      "from": "snapshot.snapshot",
+      "to": "motion.snapshot",
+      "delayed": false
+    },
+    {
+      "from": "snapshot.snapshot",
+      "to": "gateway.snapshot",
+      "delayed": false
+    },
+    {
+      "from": "scheduler.action",
+      "to": "motion.action",
+      "delayed": false
+    },
+    {
+      "from": "motion.targets",
+      "to": "gateway.targets",
+      "delayed": false
+    },
+    {
+      "from": "gateway.commands",
+      "to": "robot.commands",
+      "delayed": false
+    },
+    {
+      "from": "gateway.events",
+      "to": "recorder.events",
+      "delayed": false
+    },
+    {
+      "from": "robot.observations",
+      "to": "recorder.observations",
+      "delayed": true
+    },
+    {
+      "from": "cameras.observations",
+      "to": "recorder.observations",
+      "delayed": false
+    },
+    {
+      "from": "scheduler.action",
+      "to": "recorder.actions",
+      "delayed": false
+    },
+    {
+      "from": "motion.targets",
+      "to": "recorder.targets",
+      "delayed": false
+    },
+    {
+      "from": "vr.intent",
+      "to": "source.intent",
+      "delayed": false
+    },
+    {
+      "from": "snapshot.snapshot",
+      "to": "source.snapshot",
+      "delayed": false
+    },
+    {
+      "from": "vr.operator",
+      "to": "gateway.operator",
+      "delayed": false
+    },
+    {
+      "from": "source.action",
+      "to": "scheduler.action",
+      "delayed": false
+    }
+  ]
+}

@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VR 输入检查</title>
+  <style>
+    body {
+      font: 17px system-ui;
+      background: #101923;
+      color: #e8f0f4;
+      max-width: 900px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+    h1 {
+      font-size: 28px;
+    }
+    button,
+    select {
+      font: inherit;
+      padding: 12px 18px;
+      margin: 8px 8px 8px 0;
+      border-radius: 8px;
+      border: 1px solid #598195;
+    }
+    button {
+      background: #92e3cd;
+      color: #10231e;
+    }
+    button:disabled {
+      opacity: 0.4;
+    }
+    pre {
+      background: #192835;
+      padding: 16px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .note {
+      color: #b7cbd4;
+    }
+    canvas {
+      width: 100%;
+      height: 200px;
+      background: #162c3c;
+    }
+  </style>
+  <h1>VR 输入检查</h1>
+  <p>采集头部、左右手柄姿态与按键。当前页面仅记录输入。</p>
+  <p class="note">
+    选择参考空间后进入 VR。左手显示青色标记，右手显示橙色标记。退出 VR 返回本页查看状态。
+  </p>
+  <label
+    >参考空间
+    <select id="space">
+      <option>local-floor</option>
+      <option>local</option>
+    </select></label
+  >
+  <div>
+    <button id="start" disabled>进入 VR 采集</button><button id="end" disabled>结束会话</button>
+  </div>
+  <pre id="info">正在检查浏览器能力…</pre>
+  <canvas id="view"></canvas>
+  <p>
+    网页中的位置以米记录，姿态为 xyzw 四元数；保留所选 WebXR 参考空间。此处不设置机器人坐标映射。
+  </p>
+  <script>
+    "use strict";
+    const info = document.getElementById("info"),
+      start = document.getElementById("start"),
+      end = document.getElementById("end");
+    const sid = crypto.randomUUID(),
+      canvas = document.getElementById("view");
+    let seq = 0,
+      epoch = 0,
+      reference = "none",
+      session = null,
+      ref = null,
+      gl = null,
+      program = null,
+      buffer = null;
+    let lastSent = -Infinity,
+      inFlight = false,
+      sendErrors = 0,
+      skipped = 0,
+      pending = [],
+      sending = false;
+    const sourceIds = new WeakMap();
+    let nextSource = 0;
+    function show(value) {
+      info.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    }
+    function packet(event, extra = {}) {
+      return {
+        schema_version: "webxr-input/1",
+        session_id: sid,
+        seq: seq++,
+        event,
+        client_time_ms: performance.now(),
+        client_unix_ms: Date.now(),
+        reference_space: reference,
+        epoch,
+        visibility: session ? session.visibilityState : "none",
+        head: null,
+        inputs: [],
+        ...extra,
+      };
+    }
+    // One ordered sender prevents lifecycle/frame messages overtaking one another.
+    async function send(event) {
+      if (pending.length >= 4) {
+        skipped++;
+        return;
+      }
+      pending.push(event);
+      if (sending) return;
+      sending = true;
+      try {
+        while (pending.length) {
+          const p = pending.shift();
+          try {
+            const r = await fetch("/api/input", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(p),
+              signal: AbortSignal.timeout(4000),
+            });
+            if (!r.ok) throw new Error(await r.text());
+          } catch (e) {
+            sendErrors++;
+            show({ error: String(e), sendErrors, skipped });
+          }
+        }
+      } finally {
+        sending = false;
+      }
+    }
+    function pose(p) {
+      if (!p) return null;
+      const t = p.transform;
+      return {
+        position_m: [t.position.x, t.position.y, t.position.z],
+        orientation_xyzw: [t.orientation.x, t.orientation.y, t.orientation.z, t.orientation.w],
+        emulated_position: !!p.emulatedPosition,
+      };
+    }
+    function source(frame, s) {
+      if (!sourceIds.has(s)) sourceIds.set(s, ++nextSource);
+      const g = s.gamepad;
+      return {
+        source_id: sourceIds.get(s),
+        handedness: s.handedness,
+        profiles: Array.from(s.profiles),
+        target_ray_mode: s.targetRayMode,
+        grip: s.gripSpace ? pose(frame.getPose(s.gripSpace, ref)) : null,
+        target_ray: pose(frame.getPose(s.targetRaySpace, ref)),
+        gamepad: g
+          ? {
+              mapping: g.mapping,
+              buttons: Array.from(g.buttons, (b) => ({
+                value: b.value,
+                pressed: b.pressed,
+                touched: b.touched,
+              })),
+              axes: Array.from(g.axes),
+            }
+          : null,
+      };
+    }
+    function initGL() {
+      const compile = (type, text) => {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, text);
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+        return s;
+      };
+      program = gl.createProgram();
+      gl.attachShader(
+        program,
+        compile(
+          gl.VERTEX_SHADER,
+          "attribute vec3 p; uniform mat4 proj; uniform mat4 view; void main(){gl_Position=proj*view*vec4(p,1.0);gl_PointSize=18.0;}",
+        ),
+      );
+      gl.attachShader(
+        program,
+        compile(
+          gl.FRAGMENT_SHADER,
+          "precision mediump float; uniform vec3 color; void main(){gl_FragColor=vec4(color,1.0);}",
+        ),
+      );
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+        throw new Error(gl.getProgramInfoLog(program));
+      buffer = gl.createBuffer();
+    }
+    function render(frame, viewer, inputs) {
+      const layer = session.renderState.baseLayer;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+      gl.clearColor(0.035, 0.07, 0.1, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      if (!viewer) return;
+      gl.useProgram(program);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      const attr = gl.getAttribLocation(program, "p");
+      gl.enableVertexAttribArray(attr);
+      gl.vertexAttribPointer(attr, 3, gl.FLOAT, false, 0, 0);
+      const marks = [];
+      for (let x = -3; x <= 3; x++) for (let z = -3; z <= 3; z++) marks.push(x * 0.4, 0, z * 0.4);
+      for (const v of viewer.views) {
+        const vp = layer.getViewport(v);
+        gl.viewport(vp.x, vp.y, vp.width, vp.height);
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, "proj"), false, v.projectionMatrix);
+        gl.uniformMatrix4fv(
+          gl.getUniformLocation(program, "view"),
+          false,
+          v.transform.inverse.matrix,
+        );
+        gl.uniform3f(gl.getUniformLocation(program, "color"), 0.2, 0.38, 0.43);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(marks), gl.DYNAMIC_DRAW);
+        gl.drawArrays(gl.POINTS, 0, marks.length / 3);
+        for (const s of inputs) {
+          const p = s.grip || s.target_ray;
+          if (!p) continue;
+          const left = s.handedness === "left";
+          gl.uniform3f(
+            gl.getUniformLocation(program, "color"),
+            left ? 0.1 : 1,
+            left ? 0.9 : 0.5,
+            left ? 0.8 : 0.1,
+          );
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(p.position_m), gl.DYNAMIC_DRAW);
+          gl.drawArrays(gl.POINTS, 0, 1);
+        }
+      }
+    }
+    function frame(t, f) {
+      if (!session) return;
+      session.requestAnimationFrame(frame);
+      try {
+        const viewer = f.getViewerPose(ref),
+          inputs = Array.from(session.inputSources, (s) => source(f, s));
+        render(f, viewer, inputs);
+        if (t - lastSent >= 50) {
+          lastSent = t;
+          const p = packet("frame", {
+            xr_frame_time_ms: t,
+            head: pose(viewer),
+            inputs,
+            transport: { skipped, send_errors: sendErrors },
+          });
+          send(p);
+          show({
+            session: "采集中",
+            reference,
+            epoch,
+            head_tracked: !!viewer,
+            inputs,
+            sendErrors,
+            skipped,
+          });
+        }
+      } catch (e) {
+        show(String(e));
+      }
+    }
+    start.onclick = async () => {
+      start.disabled = true;
+      reference = document.getElementById("space").value;
+      try {
+        gl = canvas.getContext("webgl", { xrCompatible: true });
+        if (!gl) throw new Error("WebGL不可用");
+        await gl.makeXRCompatible();
+        initGL();
+        session = await navigator.xr.requestSession("immersive-vr", {
+          requiredFeatures: [reference],
+        });
+        session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
+        ref = await session.requestReferenceSpace(reference);
+        ref.addEventListener("reset", () => {
+          epoch++;
+          send(packet("reset"));
+        });
+        session.addEventListener("visibilitychange", () => send(packet("visibility")));
+        session.addEventListener("end", () => {
+          send(packet("session_end"));
+          session = null;
+          ref = null;
+          end.disabled = true;
+          start.disabled = false;
+          show("VR会话已结束，输入已停止。");
+        });
+        await send(packet("session_start"));
+        end.disabled = false;
+        session.requestAnimationFrame(frame);
+      } catch (e) {
+        await send(packet("error", { error: String(e) }));
+        show(String(e));
+        if (session) {
+          await session.end();
+        }
+        session = null;
+        start.disabled = false;
+      }
+    };
+    end.onclick = () => session && session.end();
+    async function check() {
+      let supported = false,
+        error = null;
+      try {
+        supported = !!navigator.xr && (await navigator.xr.isSessionSupported("immersive-vr"));
+      } catch (e) {
+        error = String(e);
+      }
+      const c = {
+        secure_context: isSecureContext,
+        webxr_present: !!navigator.xr,
+        immersive_vr: supported,
+        user_agent: navigator.userAgent,
+        error,
+      };
+      await send(packet("capabilities", { capabilities: c }));
+      show(c);
+      start.disabled = !supported;
+    }
+    check();
+  </script>
+</html>

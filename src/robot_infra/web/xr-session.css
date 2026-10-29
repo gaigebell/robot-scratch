@@ -1,0 +1,145 @@
+:root {
+  color-scheme: dark;
+  font:
+    17px system-ui,
+    sans-serif;
+  background: #0a1420;
+  color: #edf5f8;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 1680px;
+  padding: 28px;
+  margin: auto;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+small {
+  letter-spacing: 0.13em;
+  color: #8aafbf;
+}
+h1 {
+  font-size: 30px;
+  margin: 8px 0;
+}
+h1 span {
+  font-size: 13px;
+  color: #7fa3b5;
+  margin-left: 12px;
+}
+#state {
+  padding: 12px 20px;
+  border-radius: 30px;
+  background: #173b46;
+  color: #9aead6;
+}
+.views {
+  display: grid;
+  grid-template-columns: 1fr 2.8fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
+figure {
+  margin: 0;
+  border: 1px solid #244254;
+  background: #112536;
+  border-radius: 14px;
+  overflow: hidden;
+}
+img {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: contain;
+  display: block;
+}
+figcaption {
+  padding: 12px;
+  color: #adc7d3;
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+}
+section {
+  margin-top: 24px;
+  border: 1px solid #244254;
+  border-radius: 14px;
+  padding: 20px;
+}
+#instruction {
+  font-size: 22px;
+  margin: 0 0 18px;
+  color: #b7efdc;
+}
+button {
+  padding: 14px 26px;
+  font: inherit;
+  background: #98e5ce;
+  color: #0b302b;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+button.secondary {
+  background: #233f50;
+  color: #d9e8ef;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+}
+.note {
+  color: #a7bfcd;
+  line-height: 1.8;
+}
+details {
+  margin: 20px 0;
+  color: #95b3c3;
+}
+pre {
+  background: #132839;
+  padding: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+#error {
+  color: #ffd0bd;
+  min-height: 25px;
+}
+#xr {
+  display: none;
+}
+@media (max-width: 850px) {
+  main {
+    padding: 14px;
+  }
+  header {
+    align-items: flex-start;
+  }
+  .views {
+    gap: 6px;
+  }
+  h1 {
+    font-size: 22px;
+  }
+  figcaption {
+    font-size: 11px;
+    padding: 6px;
+  }
+  .actions {
+    flex-wrap: wrap;
+  }
+}

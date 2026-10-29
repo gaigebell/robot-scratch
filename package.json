@@ -1,0 +1,16 @@
+{
+  "name": "robot-scratch-development",
+  "private": true,
+  "description": "Development-only formatting and offline WebXR transport tests",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "format": "prettier --write \"src/robot_infra/web/**/*.{html,js,css}\" \"tests/*.mjs\" \"configs/**/*.json\" \"src/robot_infra/schemas/*.json\" package.json .prettierrc.json",
+    "format:check": "prettier --check \"src/robot_infra/web/**/*.{html,js,css}\" \"tests/*.mjs\" \"configs/**/*.json\" \"src/robot_infra/schemas/*.json\" package.json .prettierrc.json",
+    "test": "node --test tests/web-transport.test.mjs"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

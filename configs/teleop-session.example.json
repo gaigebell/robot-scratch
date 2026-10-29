@@ -1,0 +1,225 @@
+{
+  "schema_version": "live-teleop/2",
+  "performance": { "enabled": true, "window_samples": 512, "max_series": 128 },
+  "preview_runtime": { "enabled": true, "on_demand": true, "lease_s": 2.0, "archive_jpeg": false },
+  "camera_transport": { "image_reliability": "best_effort", "image_queue_depth": 5 },
+  "gripper_control": true,
+  "model": {
+    "path": "/absolute/path/to/audited-model.urdf",
+    "base": "base_link",
+    "tip": "gripper_base",
+    "joint_names": ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"],
+    "sha256": "REPLACE_WITH_MODEL_SHA256"
+  },
+  "pose_feedback": {
+    "left_native": {
+      "topic": "/robot_infra/left/end_pose_native",
+      "provenance": "installed piper_sdk GetArmEndPoseMsgs cache; integer XYZ/RX_RY_RZ preserved",
+      "source_clock_domain": "piper_sdk_received_message_stamp; hardware_clock_unverified",
+      "reference_frame": null,
+      "tracked_frame": null,
+      "frame_status": "vendor_end_pose; empty ROS frame_id; base/tool convention not calibrated",
+      "format": "native_pose_json",
+      "orientation_provenance": "native",
+      "conversion": null
+    },
+    "left_quaternion": {
+      "topic": "/left_arm/end_pose_stamped",
+      "provenance": "piper_sdk_end_pose; ROS driver converts native Euler xyz to quaternion xyzw",
+      "source_clock_domain": "piper_sdk_received_message_stamp; hardware_clock_unverified",
+      "reference_frame": null,
+      "tracked_frame": null,
+      "frame_status": "vendor_end_pose; empty ROS frame_id; base/tool convention not calibrated",
+      "format": "pose_stamped",
+      "orientation_provenance": "converted",
+      "conversion": "piper_ros PublishArmEndPose: scipy Rotation.from_euler('xyz', radians(native_RX_RY_RZ/1000)).as_quat(); xyzw"
+    },
+    "right_native": {
+      "topic": "/robot_infra/right/end_pose_native",
+      "provenance": "installed piper_sdk GetArmEndPoseMsgs cache; integer XYZ/RX_RY_RZ preserved",
+      "source_clock_domain": "piper_sdk_received_message_stamp; hardware_clock_unverified",
+      "reference_frame": null,
+      "tracked_frame": null,
+      "frame_status": "vendor_end_pose; empty ROS frame_id; base/tool convention not calibrated",
+      "format": "native_pose_json",
+      "orientation_provenance": "native",
+      "conversion": null
+    },
+    "right_quaternion": {
+      "topic": "/right_arm/end_pose_stamped",
+      "provenance": "piper_sdk_end_pose; ROS driver converts native Euler xyz to quaternion xyzw",
+      "source_clock_domain": "piper_sdk_received_message_stamp; hardware_clock_unverified",
+      "reference_frame": null,
+      "tracked_frame": null,
+      "frame_status": "vendor_end_pose; empty ROS frame_id; base/tool convention not calibrated",
+      "format": "pose_stamped",
+      "orientation_provenance": "converted",
+      "conversion": "piper_ros PublishArmEndPose: scipy Rotation.from_euler('xyz', radians(native_RX_RY_RZ/1000)).as_quat(); xyzw"
+    }
+  },
+  "arms": {
+    "left": {
+      "command_topic": "/robot_infra/left/driver_command",
+      "enable_topic": "/robot_infra/left/driver_enable",
+      "feedback_topic": "/left_arm/joint_states_feedback",
+      "status_topic": "/left_arm/arm_status",
+      "can_interface": "can_left",
+      "home_rad": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      "gripper": {
+        "limits_m": [0.0, 0.07],
+        "legacy_effort": 1.0,
+        "trigger_pressed": "open"
+      },
+      "gripper_command_topic": "/robot_infra/left/driver_gripper_command",
+      "native_pose_topic": "/robot_infra/left/end_pose_native"
+    },
+    "right": {
+      "command_topic": "/robot_infra/right/driver_command",
+      "enable_topic": "/robot_infra/right/driver_enable",
+      "feedback_topic": "/right_arm/joint_states_feedback",
+      "status_topic": "/right_arm/arm_status",
+      "can_interface": "can_right",
+      "home_rad": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      "gripper": {
+        "limits_m": [0.0, 0.07],
+        "legacy_effort": 1.0,
+        "trigger_pressed": "open"
+      },
+      "gripper_command_topic": "/robot_infra/right/driver_gripper_command",
+      "native_pose_topic": "/robot_infra/right/end_pose_native"
+    }
+  },
+  "camera_topics": {
+    "left_wrist": "/left_wrist/color/image_raw",
+    "right_wrist": "/right_wrist/color/image_raw",
+    "scene_fixed": "/scene_fixed/color/image_raw"
+  },
+  "feedback_timeout_s": 0.25,
+  "input_timeout_s": 0.6,
+  "max_joint_excursion_rad": null,
+  "max_tracking_error_rad": null,
+  "max_joint_speed_rad_s": null,
+  "max_cartesian_delta_m": null,
+  "scale": 1.0,
+  "clutch_button": 1,
+  "driver_speed_percent": 20,
+  "alignment": [
+    [0, 0, -1],
+    [-1, 0, 0],
+    [0, 1, 0]
+  ],
+  "ik_deadline_ms": 35,
+  "mapping_status": "candidate: operator preliminarily confirmed both arms up/down and left/right; fore/aft and external mounting calibration pending",
+  "measurement_tolerance_rad": 0.06,
+  "motion_scope": "onsite session workflow; native joint limits; user-confirmed zero home; no autonomous task; native speed 20 percent",
+  "rotation_control": true,
+  "recording_enabled": false,
+  "session": {
+    "control_hz": 60,
+    "home_duration_s": 4.0,
+    "home_timeout_s": 20.0,
+    "home_settle_s": 0.5,
+    "home_tolerance_rad": 0.02,
+    "result_max_age_s": 0.3,
+    "preflight_timeout_s": 30.0
+  },
+  "buttons": {
+    "primary": {
+      "hand": "right",
+      "index": 4
+    },
+    "discard": {
+      "hand": "left",
+      "index": 4
+    },
+    "clutch": 1,
+    "trigger": 0
+  },
+  "ik": {
+    "backend": "pinocchio-scipy",
+    "deadline_ms": 50,
+    "max_iterations": 40,
+    "allow_best_effort": true,
+    "hang_timeout_s": 2.0,
+    "weights": {
+      "position": 20.0,
+      "orientation": 2.0,
+      "smooth": 2.0,
+      "posture": 1e-5
+    },
+    "seed_tolerance_rad": 0.06
+  },
+  "driver": {
+    "module": "piper.piper_ctrl_single_node",
+    "sha256": "REPLACE_WITH_INSTALLED_DRIVER_SOURCE_SHA256"
+  },
+  "vr_layout": {
+    "distance_m": 2.21,
+    "main_width_m": 5.4,
+    "side_width_m": 1.4,
+    "side_x_m": 3.8,
+    "hud_y_m": 3.05,
+    "hud_face_viewer": true,
+    "hud_tilt_deg": 0
+  },
+  "camera_profiles": {
+    "left_wrist": {
+      "width": 640,
+      "height": 480,
+      "fps": 30
+    },
+    "right_wrist": {
+      "width": 640,
+      "height": 480,
+      "fps": 30
+    },
+    "scene_fixed": {
+      "width": 640,
+      "height": 480,
+      "fps": 30
+    }
+  },
+  "recording": {
+    "schema_version": "real-episode-config/1",
+    "storage": {
+      "image_backend": "raw_mcap",
+      "video": {
+        "codec": "libx264",
+        "pixel_format": "yuv420p",
+        "options": {
+          "crf": "20",
+          "preset": "veryfast"
+        },
+        "gop_size": 30,
+        "threads": 1
+      }
+    },
+    "queue_bytes": 268435456,
+    "queue_items": 16384,
+    "min_free_bytes": 1073741824,
+    "flush_timeout_s": 60,
+    "alignment": {
+      "reference_stream": "camera/scene_fixed/rgb",
+      "max_delta_s": 0.05
+    },
+    "qc": {
+      "min_fps_ratio": 0.8,
+      "max_frame_gap_s": 0.15,
+      "min_duration_s": 1.0,
+      "max_unaligned_ratio": 0.1
+    },
+    "required_events": ["raw_input", "command", "guard", "receipt"]
+  },
+  "webxr_transport": {
+    "preview_congestion_rtt_ms": 100,
+    "preview_congestion_fps": 2,
+    "input": "websocket",
+    "port": 8446
+  },
+  "gripper_control_mode": "independent_trigger",
+  "diagnostics": {
+    "segment_bytes": 134217728,
+    "max_bytes": null,
+    "min_free_bytes": 1073741824
+  }
+}
